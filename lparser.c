@@ -54,6 +54,8 @@ typedef struct BlockCnt {
   lu_byte upval;  /* true if some variable in the block is an upvalue */
   lu_byte isloop;  /* true if 'block' is a loop */
   lu_byte insidetbc;  /* true if inside the scope of a to-be-closed var. */
+  TString *labelname; /* label of the block */
+  int breaks; /* list of breaks that point to this block */
 } BlockCnt;
 
 
@@ -628,6 +630,7 @@ static void movegotosout (FuncState *fs, BlockCnt *bl) {
 
 
 static void enterblock (FuncState *fs, BlockCnt *bl, lu_byte isloop) {
+  bl->breaks = NO_JUMP;
   bl->isloop = isloop;
   bl->nactvar = fs->nactvar;
   bl->firstlabel = fs->ls->dyd->label.n;
@@ -662,8 +665,8 @@ static void leaveblock (FuncState *fs) {
   LexState *ls = fs->ls;
   int hasclose = 0;
   int stklevel = stacklevel(fs, bl->nactvar);  /* level outside the block */
-  if (bl->isloop)  /* fix pending breaks? */
-    hasclose = createlabel(ls, luaS_newliteral(ls->L, "break"), 0, 0);
+  if (bl->isloop) /* fix pending breaks? */
+    hasclose = createlabel(ls, fs->lastlooplabel, 0, 0);
   if (!hasclose && bl->previous && bl->upval)
     luaK_codeABC(fs, OP_CLOSE, stklevel, 0, 0);
   fs->bl = bl->previous;
@@ -677,6 +680,7 @@ static void leaveblock (FuncState *fs) {
     if (bl->firstgoto < ls->dyd->gt.n)  /* pending gotos in outer block? */
       undefgoto(ls, &ls->dyd->gt.arr[bl->firstgoto]);  /* error */
   }
+  luaK_patchtohere(fs, bl->breaks);
 }
 
 
@@ -1421,12 +1425,34 @@ static void gotostat (LexState *ls) {
 
 
 /*
-** Break statement. Semantically equivalent to "goto break".
+** Break statement. Semantically equivalent to "goto looplabel".
 */
 static void breakstat (LexState *ls) {
-  int line = ls->linenumber;
+  //int line = ls->linenumber;
+  FuncState *fs = ls->fs;
+  BlockCnt *bl = fs->bl;
   luaX_next(ls);  /* skip break */
-  newgotoentry(ls, luaS_newliteral(ls->L, "break"), line, luaK_jump(ls->fs));
+  if (block_follow(ls, 1) || ls->t.token == ';'){/* Break sem label */
+    while(bl && !bl->isloop){ /* procura o primeiro loop */
+      bl = bl->previous;
+    }
+    if(!bl) /* não achou loop */
+      luaX_syntaxerror(ls, "No loop to break");
+    luaK_concat(fs, &bl->breaks, luaK_jump(fs)); /* cria o jump */
+  }
+  else {/* break com label*/
+    TString *name = str_checkname(ls);
+    while (bl){ /* itera nos blocos */
+      if(name == bl->labelname){ /* compara o label */
+        luaK_concat(fs, &bl->breaks, luaK_jump(fs)); /* coloca o break na lista de breaks */
+        break;
+      }
+      bl = bl->previous;
+    }
+    if(!bl){ /* não achou o label */
+      luaX_syntaxerror(ls, "Label not found");
+    } 
+  }
 }
 
 
@@ -1452,14 +1478,40 @@ static void labelstat (LexState *ls, TString *name, int line) {
   createlabel(ls, name, line, block_follow(ls, 0));
 }
 
+static void checklooplabel(LexState *ls) {
+  FuncState *fs = ls->fs;
+  if (ls->t.token == TK_DBCOLON) {
+	  checknext(ls, TK_DBCOLON);  /* skip double colon */
+	  fs->lastlooplabel = str_checkname(ls);
+	  checkrepeated(ls, fs->lastlooplabel);
+	  checknext(ls, TK_DBCOLON);
+  } else
+	  fs->lastlooplabel = luaS_newliteral(ls->L, "break");
+}
+
+static void checklooplabel2(LexState *ls, BlockCnt *bl) {
+  FuncState *fs = ls->fs;
+  TString *label;
+  if (ls->t.token == TK_DBCOLON) {
+    checknext(ls, TK_DBCOLON);  /* skip double colon */
+    label = str_checkname(ls);
+    fs->lastlooplabel = label;
+    bl->labelname = label;
+    checkrepeated(ls, fs->lastlooplabel);
+    checknext(ls, TK_DBCOLON);
+  } else
+    fs->lastlooplabel = luaS_newliteral(ls->L, "break");
+}
 
 static void whilestat (LexState *ls, int line) {
   /* whilestat -> WHILE cond DO block END */
   FuncState *fs = ls->fs;
+  TString *prevlabel = fs->lastlooplabel;
   int whileinit;
   int condexit;
   BlockCnt bl;
   luaX_next(ls);  /* skip WHILE */
+  checklooplabel(ls);
   whileinit = luaK_getlabel(fs);
   condexit = cond(ls);
   enterblock(fs, &bl, 1);
@@ -1469,6 +1521,7 @@ static void whilestat (LexState *ls, int line) {
   check_match(ls, TK_END, TK_WHILE, line);
   leaveblock(fs);
   luaK_patchtohere(fs, condexit);  /* false conditions finish the loop */
+  fs->lastlooplabel = prevlabel;
 }
 
 
@@ -1476,11 +1529,13 @@ static void repeatstat (LexState *ls, int line) {
   /* repeatstat -> REPEAT block UNTIL cond */
   int condexit;
   FuncState *fs = ls->fs;
+  TString *prevlabel = fs->lastlooplabel;
   int repeat_init = luaK_getlabel(fs);
   BlockCnt bl1, bl2;
   enterblock(fs, &bl1, 1);  /* loop block */
   enterblock(fs, &bl2, 0);  /* scope block */
   luaX_next(ls);  /* skip REPEAT */
+  checklooplabel(ls);
   statlist(ls);
   check_match(ls, TK_UNTIL, TK_REPEAT, line);
   condexit = cond(ls);  /* read condition (inside scope block) */
@@ -1494,6 +1549,7 @@ static void repeatstat (LexState *ls, int line) {
   }
   luaK_patchlist(fs, condexit, repeat_init);  /* close the loop */
   leaveblock(fs);  /* finish loop */
+  fs->lastlooplabel = prevlabel;
 }
 
 
@@ -1608,10 +1664,12 @@ static void forlist (LexState *ls, TString *indexname) {
 static void forstat (LexState *ls, int line) {
   /* forstat -> FOR (fornum | forlist) END */
   FuncState *fs = ls->fs;
+  TString *prevlabel = fs->lastlooplabel;
   TString *varname;
   BlockCnt bl;
   enterblock(fs, &bl, 1);  /* scope for loop and control variables */
   luaX_next(ls);  /* skip 'for' */
+  checklooplabel2(ls, &bl);
   varname = str_checkname(ls);  /* first variable name */
   switch (ls->t.token) {
     case '=': fornum(ls, varname, line); break;
@@ -1620,6 +1678,7 @@ static void forstat (LexState *ls, int line) {
   }
   check_match(ls, TK_END, TK_FOR, line);
   leaveblock(fs);  /* loop scope ('break' jumps to this point) */
+  fs->lastlooplabel = prevlabel;
 }
 
 
