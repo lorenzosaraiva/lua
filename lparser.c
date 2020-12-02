@@ -1887,7 +1887,7 @@ static void statement (LexState *ls) {
     }
     case TK_DO: {  /* stat -> DO block END */
       luaX_next(ls);  /* skip DO */
-      block(ls, NULL);
+      block(ls, newlooplabel(ls, NULL));
       check_match(ls, TK_END, TK_DO, line);
       break;
     }
