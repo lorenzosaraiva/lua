@@ -32,17 +32,17 @@
 
 /* maximum number of local variables per function (must be smaller
    than 250, due to the bytecode format) */
-#define MAXVARS		200
+#define MAXVARS   200
 
 
-#define hasmultret(k)		((k) == VCALL || (k) == VVARARG)
+#define hasmultret(k)   ((k) == VCALL || (k) == VVARARG)
 
 
 /* because all strings are unified by the scanner, the parser
    can use pointer equality for string equality */
-#define eqstr(a,b)	((a) == (b))
+#define eqstr(a,b)  ((a) == (b))
 
-#define newlooplabel(ls, l)	(l ? l : luaS_newliteral(ls->L, "break"))
+#define newlooplabel(ls, l) (l ? l : luaS_newliteral(ls->L, "break"))
 
 
 /*
@@ -124,7 +124,7 @@ static void checknext (LexState *ls, int c) {
 }
 
 
-#define check_condition(ls,c,msg)	{ if (!(c)) luaX_syntaxerror(ls, msg); }
+#define check_condition(ls,c,msg) { if (!(c)) luaX_syntaxerror(ls, msg); }
 
 
 /*
@@ -494,7 +494,7 @@ static void adjust_assign (LexState *ls, int nvars, int nexps, expdesc *e) {
 }
 
 
-#define enterlevel(ls)	luaE_incCstack(ls->L)
+#define enterlevel(ls)  luaE_incCstack(ls->L)
 
 
 #define leavelevel(ls) ((ls)->L->nCcalls--)
@@ -672,7 +672,7 @@ static void leaveblock (FuncState *fs) {
   int stklevel = stacklevel(fs, bl->nactvar);  /* level outside the block */
   if (bl->label){ /* fix pending breaks? */ /* So entra se tiver um break?? TODO:DELETE*/
     hasclose = createlabel(ls, fs->lastlooplabel, 0, 0); 
-    if(!hasclose && bl->insideup){ /* Caso não tenha close, porém tenha um break, e um block interno tenha um upvalue a ser fechado TODO:DELETE*/
+    if(!hasclose && bl->insideup && bl->breaklist > 0){ /* Caso não tenha close, porém tenha um break, e um block interno tenha um upvalue a ser fechado TODO:DELETE*/
       luaK_codeABC(fs, OP_CLOSE, stklevel, 0, 0);
       hasclose = 1;
     }
@@ -1255,7 +1255,7 @@ static const struct {
    {2, 2}, {1, 1}            /* and, or */
 };
 
-#define UNARY_PRIORITY	12  /* priority for unary operators */
+#define UNARY_PRIORITY  12  /* priority for unary operators */
 
 
 /*
