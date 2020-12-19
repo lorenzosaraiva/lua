@@ -56,7 +56,7 @@ typedef struct BlockCnt {
   lu_byte nactvar;  /* # active locals outside the block */
   lu_byte upval;  /* true if some variable in the block is an upvalue */
   lu_byte insidetbc;  /* true if inside the scope of a to-be-closed var. */
-  lu_byte crossedbreak; /* true if the block has a break crossing it */
+  lu_byte crossedbreak; /* true if the block has a break traversing it */
   lu_byte insideup; /* true if a block inside has an upvalue and is crossed by break */
   int breaklist; /* list of jumps out of this loop */
 } BlockCnt;
@@ -2006,3 +2006,4 @@ LClosure *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
   return cl;  /* closure is on the stack, too */
 }
 
+  

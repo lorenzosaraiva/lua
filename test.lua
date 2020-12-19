@@ -16,6 +16,15 @@ x::do
 end
 
 for i=1, 10 do
+  --print("loop")
+  if i > 2 then
+    do
+      break
+    end
+  end
+end
+
+for i=1, 10 do
   print("loop")
   do
     break
@@ -208,3 +217,4 @@ end
 
 
 print("End of tests")
+
