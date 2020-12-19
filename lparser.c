@@ -56,6 +56,8 @@ typedef struct BlockCnt {
   lu_byte nactvar;  /* # active locals outside the block */
   lu_byte upval;  /* true if some variable in the block is an upvalue */
   lu_byte insidetbc;  /* true if inside the scope of a to-be-closed var. */
+  lu_byte crossedbreak; /* true if the block has a break crossing it */
+  lu_byte insideup; /* true if a block inside has an upvalue and is crossed by break */
   int breaklist; /* list of jumps out of this loop */
 } BlockCnt;
 
@@ -636,6 +638,8 @@ static void enterblock (FuncState *fs, BlockCnt *bl, TString *label) {
   bl->firstlabel = fs->ls->dyd->label.n;
   bl->firstgoto = fs->ls->dyd->gt.n;
   bl->upval = 0;
+  bl->crossedbreak = 0;
+  bl->insideup = 0;
   bl->insidetbc = (fs->bl != NULL && fs->bl->insidetbc);
   bl->previous = fs->bl;
   fs->bl = bl;
@@ -666,10 +670,17 @@ static void leaveblock (FuncState *fs) {
   LexState *ls = fs->ls;
   int hasclose = 0;
   int stklevel = stacklevel(fs, bl->nactvar);  /* level outside the block */
-  if (bl->label) /* fix pending breaks? */
-    hasclose = createlabel(ls, fs->lastlooplabel, 0, 0);
+  if (bl->label){ /* fix pending breaks? */ /* So entra se tiver um break?? TODO:DELETE*/
+    hasclose = createlabel(ls, fs->lastlooplabel, 0, 0); 
+    if(!hasclose && bl->insideup){ /* Caso não tenha close, porém tenha um break, e um block interno tenha um upvalue a ser fechado TODO:DELETE*/
+      luaK_codeABC(fs, OP_CLOSE, stklevel, 0, 0);
+      hasclose = 1;
+    }
+  }
   if (!hasclose && bl->previous && bl->upval)
     luaK_codeABC(fs, OP_CLOSE, stklevel, 0, 0);
+  if((bl->upval || bl->insideup) && bl->crossedbreak) /* Caso um bloco atrevessado pelo break tenho ou um upval ou insideup, propaga insideup TODO:DELETE*/
+    bl->previous->insideup = 1;
   fs->bl = bl->previous;
   removevars(fs, bl->nactvar);
   lua_assert(bl->nactvar == fs->nactvar);
@@ -1446,7 +1457,7 @@ static void breakstat (LexState *ls) {
       if (!label) break;
       if (eqstr(blabel, label)) break;
     }
-
+    bl->crossedbreak = 1; /* Marca os blocos que são atravessados pelo break TODO:DELETE */
     bl = bl->previous;
   }
   if (!bl)
@@ -1887,7 +1898,7 @@ static void statement (LexState *ls) {
     }
     case TK_DO: {  /* stat -> DO block END */
       luaX_next(ls);  /* skip DO */
-      block(ls, newlooplabel(ls, NULL));
+      block(ls, NULL);
       check_match(ls, TK_END, TK_DO, line);
       break;
     }
