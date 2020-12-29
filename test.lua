@@ -1,122 +1,123 @@
 j = 0
 loop1::while(j < 10) do
   loop2::for i=0, 10 do
-    print(i) 
     break loop1
   end
   j = j + 1
 end
-
+assert(j == 0)
 
 x::do
   for i=1, 10 do
-    print(i)
+    j = i
     break x
   end
 end
+assert(j == 1)
 
 for i=1, 10 do
-  --print("loop")
   if i > 2 then
     do
+      j = i
       break
     end
   end
 end
+assert(j == 3)
+
 
 for i=1, 10 do
-  print("loop")
   do
+    j = i
     break
   end
 end
+assert(j == 1)
 
+j = 0
+a::for i=1,10 do
+  j=i
+  break;  
+end
+assert(j == 1)
 
-
+j = 0
 p::for i=2, 10 do
-  print(i)
+  j = i
   if false then
-    print("what")
+    assert(1 == 0)
   else
     break p
   end
 end
+assert(j == 2)
 
+j = 0
 p::for i=3, 10 do
-  print(i)
+  j = i
   if true then
     break p
   else
-    print("what")
+    assert(1 == 0)
   end
 end
+assert(j == 3)
 
 x::do
-  k::for j=0, 10 do
+  k::for i=0, 10 do
     for i=1, 10 do
       break k
     end
   end
-  print("4")
+  j = 10
 end
-
+assert(j == 10)
+-----
 e::do
   for i=0, 10 do
-    --print(i)
     do
-      for j=1,10 do
-        --print(j)
+      for k=1,10 do
         break
       end
     end
   end
-  print("5")
+  j = 1
 end
+
+assert(j == 1)
 
 e::do
   for i=0, 10 do
-    --print(i)
     do
-      for j=1,10 do
-        --print(j)
+      for k=1,10 do
         break e
       end
     end
   end
-  print("erro")
+  j = 2
 end
+assert(j == 1)
 
 x::do
-  k::for j=1, 10 do
+  k::for l=1, 10 do
     for i=1, 10 do
       break x
     end
   end
-  print("erro")
+  j = 2
 end
+assert(j == 1)
 
 x::do
-  k::for j=1, 4 do
-  --print("loop")
+  k::for l=1, 4 do
+    j = l
     for i=1, 10 do
       break
     end
   end
 end
+assert(j == 4)
 
-
--- TESTING THE BREAK GOTOLABEL
--- 1 - Simple for, no label
-p::for i = 0, 5 do
-  --if i > 3 then
-  break
-  --end
-end
-
--- 2 - Simple for, label
-a::for i = 0, 5 do
-  break a
-end
 
 -- 3 - Nested for, no label
 
@@ -137,14 +138,9 @@ for i = 0, 10 do
   end
 end
 
-if ((control2 == false) or (control1 == false)) then
-  print("Erro no teste 3 - break terminou loops indevidos.")
-end
-
+assert((control2 == true) and (control1 == true)) 
 control1 = false
 control2 = false
-
--- 4- Nested for, label
 
 b::for i = 0, 10 do
   if i > 3 then
@@ -156,16 +152,11 @@ b::for i = 0, 10 do
     end
     for k = 0, 10 do
       break b  
-      print("Erro no teste 4 - ignorou break")
     end
   end
 end
 
-if ((control2 == true) or (control1 == true)) then
-  print("Erro no teste 4 - break terminou loops indevidos.")
-end
-
--- 5- Nested for, label to middle for-loop
+assert((control2 == false) and (control1 == false))
 
 control1 = false
 control2 = false
@@ -180,17 +171,13 @@ for i = 0, 10 do
       control2 = true
     end
     for k = 0, 10 do
-      break c  
-      print("Erro no teste 5 - ignorou break")
+      break c 
     end
   end
 end
 
-if ((control2 == true) or (control1 == false)) then
-  print("Erro no teste 5")
-end
+assert((control2 == false) and (control1 == true))
 
--- 6- 
 a = 0
 a::repeat
   for i = 0, 10 do
@@ -199,11 +186,8 @@ a::repeat
   end
 until (a > 4)
 
-if (a > 1) then
-  print("Erro no teste 6")
-end
+assert(a <= 1)
 
-print("test final")
 j=0
 a::for i = 0, 10 do
   b::while j < 10 do	
@@ -211,10 +195,9 @@ a::for i = 0, 10 do
     c::repeat 
       break
     until (j > 10000)
-    --print(j)
   end
 end
-
+assert(j == 10)
 
 print("End of tests")
 
