@@ -219,6 +219,41 @@ for i=1, 10 do
 end
 assert(j == 3)
 
+for i=1,10 do
+	x::do
+		if i % 3 == 0 then
+			break step;
+		end
+	end
+	assert(i % 3 ~= 0)
+	j = i
+end 
+assert(j == 10)
+
+j = 0
+for i=1,10 do
+	do
+		if i % 3 == 0 then
+			break step;
+		end
+	end
+	assert(i % 3 ~= 0)
+	j = i
+end 
+assert(j == 10)
+
+j=1
+i=0
+while i ~= 10 do
+	assert(j % 3 ~= 0)
+	i = i + 1
+	if i % 3 == 0 then
+		break step;
+	end
+	assert(i % 3 ~= 0)
+	j = i
+end 
+assert(j == 10)
 
 for i=1, 10 do
   j = i
@@ -515,17 +550,17 @@ end
 
 a::for i=1,10 do
   break a;	
-  --local x = 0
+  x = 0
 end
 
 a::for i=1,10 do
   break a	
-  --local x = 0
+  --x = 0
 end
 
 for i=1,10 do
   break;	
-  local x = 0
+  x = 0
 end
 
 for i=1,10 do

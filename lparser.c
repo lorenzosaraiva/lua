@@ -42,7 +42,7 @@
    can use pointer equality for string equality */
 #define eqstr(a,b)  ((a) == (b))
 
-#define newblocklabel(ls, l) (l ? l : luaS_newliteral(ls->L, "break"))
+//#define newblocklabel(ls, l) (l ? l : luaS_newliteral(ls->L, "break"))
 
 
 /*
@@ -1492,7 +1492,7 @@ static void whilestat (LexState *ls, int line, TString *label) {
   luaX_next(ls);  /* skip WHILE */
   whileinit = luaK_getlabel(fs);
   condexit = cond(ls);
-  enterblock(fs, &bl, newblocklabel(ls, label), 1);
+  enterblock(fs, &bl, label, 1);
   checknext(ls, TK_DO);
   block(ls, luaS_newliteral(ls->L, "step"));
   luaK_jumpto(fs, whileinit);
@@ -1508,10 +1508,11 @@ static void repeatstat (LexState *ls, int line, TString *label) {
   FuncState *fs = ls->fs;
   int repeat_init = luaK_getlabel(fs);
   BlockCnt bl1, bl2;
-  enterblock(fs, &bl1, newblocklabel(ls, label), 1);  /* loop block */
+  enterblock(fs, &bl1, label, 1);  /* loop block */
   enterblock(fs, &bl2, NULL, 0);  /* scope block */
   luaX_next(ls);  /* skip REPEAT */
-  statlist(ls);
+  block(ls, luaS_newliteral(ls->L, "step")); /* cria um bloco interno para ter o step. pode? TODO:DELETE */
+  //statlist(ls); /* statlist(ls) é chamada na block */
   check_match(ls, TK_UNTIL, TK_REPEAT, line);
   condexit = cond(ls);  /* read condition (inside scope block) */
   leaveblock(fs);  /* finish scope */
@@ -1571,7 +1572,7 @@ static void forbody (LexState *ls, int base, int line, int nvars, int isgen) {
   enterblock(fs, &bl, NULL, 0);  /* scope for declared variables */
   adjustlocalvars(ls, nvars);
   luaK_reserveregs(fs, nvars);
-  block(ls, NULL);
+  block(ls, luaS_newliteral(ls->L, "step"));
   leaveblock(fs);  /* end of scope for declared variables */
   fixforjump(fs, prep, luaK_getlabel(fs), 0);
   if (isgen) {  /* generic for? */
@@ -1640,7 +1641,7 @@ static void forstat (LexState *ls, int line, TString *label) {
   FuncState *fs = ls->fs;
   TString *varname;
   BlockCnt bl;
-  enterblock(fs, &bl, newblocklabel(ls, label), 1);  /* scope for loop and control variables */
+  enterblock(fs, &bl, label, 1);  /* scope for loop and control variables */
   luaX_next(ls);  /* skip 'for' */
   varname = str_checkname(ls);  /* first variable name */
   switch (ls->t.token) {
