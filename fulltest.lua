@@ -425,7 +425,46 @@ a::repeat
   end
 until (a > 4)
 
-assert(a <= 1)
+assert(a == 1)
+
+a = 0
+repeat
+  for i = 0, 10 do
+	a = a + 1
+  end
+until (a > 4)
+assert(a == 11)
+
+
+a = 0
+repeat
+  for i = 0, 10 do
+  	if (i % 2 == 0) then
+  		break step
+  	end
+	a = a + 1
+  end
+until (a > 4)
+assert(a == 5)
+
+a = 0
+repeat
+  for i = 0, 10 do
+	a = a + 1
+	break
+  end
+until (a > 4)
+
+assert(a == 5)
+
+a=0
+a::repeat
+  do
+	a = a + 1
+	break
+  end
+until (a > 4)
+assert(a == 1)
 
 j=0
 a::for i = 0, 10 do

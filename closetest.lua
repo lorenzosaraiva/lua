@@ -338,6 +338,16 @@ function f18()
 	end
 end
 
+function f19 (a, b)
+	while a do
+	  if b then 
+	  	break 
+	  else 
+	  	a = a + 1 
+	  end
+	end
+end
 
 
-T.printcode(f12)
+
+T.printcode(f19)
